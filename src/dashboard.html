@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineplexBD Ticket Watcher</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0c0c1d;
+    --bg-card: #161630;
+    --bg-card-hover: #1c1c3a;
+    --border: #2a2a50;
+    --purple: #7c3aed;
+    --purple-dim: #5b21b6;
+    --purple-glow: rgba(124, 58, 237, 0.3);
+    --green: #22c55e;
+    --green-dim: rgba(34, 197, 94, 0.15);
+    --amber: #f59e0b;
+    --amber-dim: rgba(245, 158, 11, 0.15);
+    --red: #ef4444;
+    --red-dim: rgba(239, 68, 68, 0.15);
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --text-muted: #64748b;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-icon {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--purple), var(--purple-dim));
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .header-text h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; }
+  .header-text p { font-size: 0.85rem; color: var(--text-dim); margin-top: 2px; }
+  .status-badge {
+    margin-left: auto;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .status-badge.idle { background: var(--bg-card); color: var(--text-muted); border: 1px solid var(--border); }
+  .status-badge.watching {
+    background: var(--green-dim); color: var(--green);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    animation: pulse-badge 2s ease-in-out infinite;
+  }
+  @keyframes pulse-badge { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+  /* Config section */
+  .config-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+  .config-toggle {
+    width: 100%;
+    padding: 0.85rem 1.25rem;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+  }
+  .config-toggle:hover { background: var(--bg-card-hover); }
+  .config-toggle .arrow {
+    margin-left: auto;
+    transition: transform 0.2s;
+    color: var(--text-muted);
+  }
+  .config-toggle.open .arrow { transform: rotate(180deg); }
+  .config-body {
+    display: none;
+    padding: 0 1.25rem 1.25rem;
+  }
+  .config-body.open { display: block; }
+  .config-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .config-field label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .config-field select {
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+  }
+  .config-field select:focus { border-color: var(--purple); outline: none; }
+  .config-field select:disabled { opacity: 0.5; cursor: not-allowed; }
+  .config-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .config-status {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  .config-status.loading { color: var(--amber); }
+  .config-status.success { color: var(--green); }
+  .config-status.error { color: var(--red); }
+  .btn-sm {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-load {
+    background: var(--bg);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .btn-load:hover:not(:disabled) { border-color: var(--purple); color: var(--text); }
+  .btn-save {
+    background: var(--purple);
+    color: white;
+  }
+  .btn-save:hover:not(:disabled) { background: var(--purple-dim); }
+
+  /* Info bar */
+  .info-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .info-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+  }
+  .info-item .label {
+    font-size: 0.7rem; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;
+  }
+  .info-item .value { font-size: 0.95rem; font-weight: 600; }
+
+  /* Controls */
+  .controls { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; }
+  .btn {
+    padding: 10px 28px; border-radius: 10px; border: none;
+    font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-start { background: var(--purple); color: white; }
+  .btn-start:hover:not(:disabled) { background: var(--purple-dim); box-shadow: 0 0 20px var(--purple-glow); }
+  .btn-stop { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.3); }
+  .btn-stop:hover:not(:disabled) { background: rgba(239, 68, 68, 0.25); }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem; margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem; text-align: center;
+  }
+  .stat-card .stat-value { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat-card .stat-label {
+    font-size: 0.7rem; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px;
+  }
+
+  /* Section headings */
+  .section-heading {
+    font-size: 0.8rem; font-weight: 600; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px;
+  }
+  .section-heading::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Date cards */
+  .dates-section { margin-bottom: 1.5rem; }
+  .dates-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 0.6rem;
+  }
+  .date-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 0.9rem 0.75rem;
+    text-align: center; transition: all 0.3s;
+  }
+  .date-card:hover { background: var(--bg-card-hover); border-color: var(--purple); }
+  .date-card .day-name { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .date-card .day-num { font-size: 1.6rem; font-weight: 700; line-height: 1.2; margin: 2px 0; }
+  .date-card .month { font-size: 0.75rem; color: var(--text-dim); }
+  .date-card.new-date {
+    border-color: var(--green); background: var(--green-dim);
+    animation: glow-green 1.5s ease-in-out 3;
+  }
+  @keyframes glow-green {
+    0%, 100% { box-shadow: 0 0 0 rgba(34, 197, 94, 0); }
+    50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+  }
+  .no-dates {
+    color: var(--text-muted); font-size: 0.9rem; padding: 2rem; text-align: center;
+    background: var(--bg-card); border: 1px dashed var(--border); border-radius: var(--radius);
+  }
+
+  /* Activity log */
+  .log-section { margin-bottom: 1.5rem; }
+  .log-container {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); max-height: 320px; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .log-entry {
+    padding: 0.6rem 1rem; font-size: 0.8rem;
+    border-bottom: 1px solid rgba(42, 42, 80, 0.5);
+    display: flex; align-items: flex-start; gap: 10px; font-variant-numeric: tabular-nums;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry .log-time { color: var(--text-muted); flex-shrink: 0; font-family: 'Consolas', 'SF Mono', monospace; font-size: 0.75rem; }
+  .log-entry .log-icon { flex-shrink: 0; width: 18px; text-align: center; }
+  .log-entry .log-msg { color: var(--text-dim); }
+  .log-entry.log-alert { background: var(--green-dim); }
+  .log-entry.log-alert .log-msg { color: var(--green); font-weight: 600; }
+  .log-entry.log-error { background: var(--red-dim); }
+  .log-entry.log-error .log-msg { color: var(--red); }
+  .log-entry.log-info .log-msg { color: var(--text-dim); }
+  .log-empty { padding: 2rem; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+
+  /* Spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid var(--border); border-top-color: var(--purple);
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+    vertical-align: middle; margin-right: 6px;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .container { padding: 1rem; }
+    .header { flex-wrap: wrap; }
+    .status-badge { margin-left: 0; }
+    .info-bar { grid-template-columns: 1fr; }
+    .config-row { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .dates-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">🎬</div>
+    <div class="header-text">
+      <h1>CineplexBD Ticket Watcher</h1>
+      <p id="subtitle">Loading...</p>
+    </div>
+    <div class="status-badge idle" id="statusBadge">IDLE</div>
+  </div>
+
+  <!-- Configuration -->
+  <div class="config-section">
+    <button class="config-toggle" id="configToggle" onclick="toggleConfig()">
+      ⚙ Configure Movie &amp; Location
+      <span class="arrow">▼</span>
+    </button>
+    <div class="config-body" id="configBody">
+      <div class="config-row">
+        <div class="config-field">
+          <label>Location</label>
+          <select id="locationSelect" disabled onchange="onLocationChange()">
+            <option value="">-- Click "Load" first --</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label>Movie</label>
+          <select id="movieSelect" disabled>
+            <option value="">-- Select location first --</option>
+          </select>
+        </div>
+      </div>
+      <div class="config-actions">
+        <button class="btn-sm btn-load" id="btnLoadLocs" onclick="loadLocations()">Load Locations</button>
+        <button class="btn-sm btn-save" id="btnSave" onclick="saveConfig()" disabled>Save &amp; Apply</button>
+        <span class="config-status" id="configStatus"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info bar -->
+  <div class="info-bar">
+    <div class="info-item">
+      <div class="label">Movie</div>
+      <div class="value" id="movieName">--</div>
+    </div>
+    <div class="info-item">
+      <div class="label">Location</div>
+      <div class="value" id="locationName">--</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="btn btn-start" id="btnStart" onclick="startMonitor()">
+      <span>&#9654;</span> Start Watching
+    </button>
+    <button class="btn btn-stop" id="btnStop" onclick="stopMonitor()" disabled>
+      <span>&#9632;</span> Stop
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value" id="statChecks">0</div>
+      <div class="stat-label">Checks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statDates">0</div>
+      <div class="stat-label">Dates</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statAlerts">0</div>
+      <div class="stat-label">Alerts</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statUptime">--</div>
+      <div class="stat-label">Uptime</div>
+    </div>
+  </div>
+
+  <!-- Available Dates -->
+  <div class="dates-section">
+    <div class="section-heading">Available Dates</div>
+    <div class="dates-grid" id="datesGrid">
+      <div class="no-dates">No dates yet. Start monitoring to check availability.</div>
+    </div>
+  </div>
+
+  <!-- Activity Log -->
+  <div class="log-section">
+    <div class="section-heading">Activity Log</div>
+    <div class="log-container" id="logContainer">
+      <div class="log-empty">Waiting for events...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  let state = {
+    running: false,
+    movie: '', movieId: null,
+    location: '', locationId: null,
+    dates: [],
+    newDates: new Set(),
+    stats: { checks: 0, alerts: 0, errors: 0, started_at: null },
+  };
+
+  let uptimeInterval = null;
+  let locationsCache = [];
+  let moviesCache = [];
+
+  // --- SSE Connection ---
+  function connect() {
+    const es = new EventSource('/api/events');
+    es.onmessage = function(e) {
+      handleEvent(JSON.parse(e.data));
+    };
+    es.onerror = function() {
+      updateStatus(false);
+    };
+  }
+
+  function handleEvent(event) {
+    switch (event.type) {
+      case 'init':
+        state.movie = event.movie || '';
+        state.movieId = event.movie_id || null;
+        state.location = event.location || '';
+        state.locationId = event.location_id || null;
+        state.dates = event.dates || [];
+        state.stats = event.stats || state.stats;
+        state.running = event.running;
+        updateUI();
+        if (event.log && event.log.length > 0) {
+          document.getElementById('logContainer').innerHTML = '';
+          event.log.forEach(e => addLogEntry(e));
+        }
+        break;
+
+      case 'status':
+        state.running = event.running;
+        state.movie = event.movie || state.movie;
+        state.location = event.location || state.location;
+        updateUI();
+        addLogEntry(event);
+        break;
+
+      case 'check':
+        state.stats.checks = event.count;
+        state.dates = event.dates || state.dates;
+        if (event.new_dates && event.new_dates.length > 0) {
+          event.new_dates.forEach(d => state.newDates.add(d));
+          setTimeout(() => { event.new_dates.forEach(d => state.newDates.delete(d)); renderDates(); }, 15000);
+        }
+        updateUI();
+        addLogEntry(event);
+        break;
+
+      case 'alert':
+        state.stats.checks = event.count;
+        state.stats.alerts++;
+        state.dates = event.dates || state.dates;
+        if (event.new_dates) {
+          event.new_dates.forEach(d => state.newDates.add(d));
+          setTimeout(() => { event.new_dates.forEach(d => state.newDates.delete(d)); renderDates(); }, 30000);
+        }
+        updateUI();
+        addLogEntry(event);
+        if (Notification.permission === 'granted') {
+          new Notification('New Tickets Available!', {
+            body: event.new_dates ? 'New dates: ' + event.new_dates.join(', ') : event.message
+          });
+        }
+        break;
+
+      case 'error':
+        state.stats.errors++;
+        updateStats();
+        addLogEntry(event);
+        break;
+
+      case 'stopped':
+        state.running = false;
+        updateStatus(false);
+        addLogEntry(event);
+        break;
+
+      case 'config_changed':
+        state.movie = event.movie || '';
+        state.movieId = event.movie_id || null;
+        state.location = event.location || '';
+        state.locationId = event.location_id || null;
+        state.dates = [];
+        updateUI();
+        addLogEntry({ type: 'status', timestamp: new Date().toLocaleTimeString(),
+          message: `Config changed: ${event.movie} at ${event.location}` });
+        break;
+    }
+  }
+
+  // --- UI Updates ---
+  function updateUI() {
+    updateStatus(state.running);
+    document.getElementById('movieName').textContent = state.movie || '--';
+    document.getElementById('locationName').textContent = state.location || '--';
+    document.getElementById('subtitle').textContent = state.movie && state.location
+      ? state.movie + ' at ' + state.location
+      : 'Select movie and location below';
+    renderDates();
+    updateStats();
+  }
+
+  function updateStatus(running) {
+    const badge = document.getElementById('statusBadge');
+    const btnStart = document.getElementById('btnStart');
+    const btnStop = document.getElementById('btnStop');
+    if (running) {
+      badge.textContent = 'WATCHING';
+      badge.className = 'status-badge watching';
+      btnStart.disabled = true;
+      btnStop.disabled = false;
+      startUptime();
+    } else {
+      badge.textContent = 'IDLE';
+      badge.className = 'status-badge idle';
+      btnStart.disabled = false;
+      btnStop.disabled = true;
+      stopUptime();
+    }
+  }
+
+  function updateStats() {
+    document.getElementById('statChecks').textContent = state.stats.checks;
+    document.getElementById('statDates').textContent = state.dates.length;
+    document.getElementById('statAlerts').textContent = state.stats.alerts;
+  }
+
+  function renderDates() {
+    const grid = document.getElementById('datesGrid');
+    if (!state.dates || state.dates.length === 0) {
+      grid.innerHTML = '<div class="no-dates">No dates available yet. Start monitoring to check.</div>';
+      return;
+    }
+    grid.innerHTML = state.dates.map(dateStr => {
+      const d = new Date(dateStr + 'T00:00:00');
+      const isNew = state.newDates.has(dateStr);
+      return `<div class="date-card ${isNew ? 'new-date' : ''}">
+        <div class="day-name">${DAY_NAMES[d.getDay()]}</div>
+        <div class="day-num">${d.getDate()}</div>
+        <div class="month">${MONTH_NAMES[d.getMonth()]}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // --- Activity Log ---
+  function addLogEntry(event) {
+    const container = document.getElementById('logContainer');
+    const empty = container.querySelector('.log-empty');
+    if (empty) empty.remove();
+
+    const entry = document.createElement('div');
+    const ts = event.timestamp || new Date().toLocaleTimeString();
+    let icon = '', cssClass = 'log-info', msg = '';
+
+    switch (event.type) {
+      case 'check':
+        icon = event.initial ? '&#128269;' : '&#10003;';
+        msg = event.initial
+          ? `Initial scan: ${(event.dates||[]).length} dates found`
+          : `Check #${event.count}: ${(event.dates||[]).length} dates available`;
+        if (event.removed_dates && event.removed_dates.length > 0)
+          msg += ` (${event.removed_dates.length} removed)`;
+        break;
+      case 'alert':
+        icon = '&#127881;';
+        cssClass = 'log-alert';
+        msg = `NEW DATES: ${(event.new_dates||[]).join(', ')}`;
+        break;
+      case 'error':
+        icon = '&#10007;';
+        cssClass = 'log-error';
+        msg = event.message || 'Unknown error';
+        break;
+      case 'status':
+        icon = '&#9654;';
+        msg = event.message || 'Monitor started';
+        break;
+      case 'stopped':
+        icon = '&#9632;';
+        msg = `Stopped: ${event.reason || 'user'}`;
+        break;
+      default: return;
+    }
+
+    entry.className = `log-entry ${cssClass}`;
+    entry.innerHTML = `<span class="log-time">${ts}</span>
+      <span class="log-icon">${icon}</span>
+      <span class="log-msg">${msg}</span>`;
+    container.insertBefore(entry, container.firstChild);
+    while (container.children.length > 50) container.removeChild(container.lastChild);
+  }
+
+  // --- Uptime Timer ---
+  function startUptime() {
+    if (uptimeInterval) return;
+    const start = state.stats.started_at ? new Date(state.stats.started_at) : new Date();
+    uptimeInterval = setInterval(() => {
+      const diff = Math.floor((Date.now() - start.getTime()) / 1000);
+      const h = Math.floor(diff / 3600);
+      const m = Math.floor((diff % 3600) / 60);
+      const s = diff % 60;
+      document.getElementById('statUptime').textContent = h > 0 ? `${h}h ${m}m` : `${m}m ${s}s`;
+    }, 1000);
+  }
+  function stopUptime() {
+    if (uptimeInterval) { clearInterval(uptimeInterval); uptimeInterval = null; }
+    document.getElementById('statUptime').textContent = '--';
+  }
+
+  // --- Configuration ---
+  window.toggleConfig = function() {
+    const toggle = document.getElementById('configToggle');
+    const body = document.getElementById('configBody');
+    toggle.classList.toggle('open');
+    body.classList.toggle('open');
+  };
+
+  function setConfigStatus(text, cls) {
+    const el = document.getElementById('configStatus');
+    el.textContent = text;
+    el.className = 'config-status ' + (cls || '');
+  }
+
+  window.loadLocations = async function() {
+    const btn = document.getElementById('btnLoadLocs');
+    const sel = document.getElementById('locationSelect');
+    btn.disabled = true;
+    setConfigStatus('', '');
+    document.getElementById('configStatus').innerHTML = '<span class="spinner"></span>Loading locations...';
+    document.getElementById('configStatus').className = 'config-status loading';
+
+    try {
+      const res = await fetch('/api/locations');
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message);
+
+      locationsCache = data.locations;
+      sel.innerHTML = '<option value="">-- Select location --</option>';
+      data.locations.forEach(loc => {
+        const opt = document.createElement('option');
+        opt.value = loc.id;
+        opt.textContent = loc.locationTitle || loc.location_name || `Location ${loc.id}`;
+        opt.dataset.name = opt.textContent;
+        if (loc.id === state.locationId) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.disabled = false;
+      setConfigStatus(`${data.locations.length} locations loaded`, 'success');
+
+      // Auto-load movies if location is pre-selected
+      if (sel.value) onLocationChange();
+    } catch (e) {
+      setConfigStatus('Failed: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  window.onLocationChange = async function() {
+    const locSel = document.getElementById('locationSelect');
+    const movSel = document.getElementById('movieSelect');
+    const locId = locSel.value;
+
+    if (!locId) {
+      movSel.innerHTML = '<option value="">-- Select location first --</option>';
+      movSel.disabled = true;
+      document.getElementById('btnSave').disabled = true;
+      return;
+    }
+
+    movSel.innerHTML = '<option value="">Loading movies...</option>';
+    movSel.disabled = true;
+
+    try {
+      const res = await fetch(`/api/movies?location_id=${locId}`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message);
+
+      const running = data.running || [];
+      const upcoming = data.upcoming || [];
+      moviesCache = [...running, ...upcoming];
+
+      movSel.innerHTML = '<option value="">-- Select movie --</option>';
+
+      if (running.length > 0) {
+        const group = document.createElement('optgroup');
+        group.label = 'Now Showing';
+        running.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m.movie_id;
+          opt.textContent = m.title;
+          opt.dataset.name = m.title;
+          if (m.movie_id === state.movieId) opt.selected = true;
+          group.appendChild(opt);
+        });
+        movSel.appendChild(group);
+      }
+
+      if (upcoming.length > 0) {
+        const group = document.createElement('optgroup');
+        group.label = 'Coming Soon';
+        upcoming.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m.movie_id;
+          opt.textContent = m.title;
+          opt.dataset.name = m.title;
+          group.appendChild(opt);
+        });
+        movSel.appendChild(group);
+      }
+
+      movSel.disabled = false;
+      movSel.onchange = function() {
+        document.getElementById('btnSave').disabled = !movSel.value;
+      };
+
+      // Enable save if movie was pre-selected
+      if (movSel.value) document.getElementById('btnSave').disabled = false;
+    } catch (e) {
+      movSel.innerHTML = '<option value="">Failed to load</option>';
+      setConfigStatus('Movies: ' + e.message, 'error');
+    }
+  };
+
+  window.saveConfig = async function() {
+    const locSel = document.getElementById('locationSelect');
+    const movSel = document.getElementById('movieSelect');
+    const btn = document.getElementById('btnSave');
+
+    if (!locSel.value || !movSel.value) return;
+
+    const locOpt = locSel.options[locSel.selectedIndex];
+    const movOpt = movSel.options[movSel.selectedIndex];
+
+    btn.disabled = true;
+    setConfigStatus('Saving...', 'loading');
+
+    try {
+      const res = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          location_id: parseInt(locSel.value),
+          location_name: locOpt.dataset.name || locOpt.textContent,
+          movie_id: parseInt(movSel.value),
+          movie_name: movOpt.dataset.name || movOpt.textContent,
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message);
+
+      setConfigStatus('Saved!', 'success');
+      // Collapse config
+      setTimeout(() => {
+        document.getElementById('configToggle').classList.remove('open');
+        document.getElementById('configBody').classList.remove('open');
+      }, 1000);
+    } catch (e) {
+      setConfigStatus('Error: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  // --- Monitor Controls ---
+  window.startMonitor = async function() {
+    document.getElementById('btnStart').disabled = true;
+    try {
+      const res = await fetch('/api/start', { method: 'POST' });
+      const data = await res.json();
+      if (!data.ok) addLogEntry({ type: 'error', message: data.message, timestamp: new Date().toLocaleTimeString() });
+    } catch (e) {
+      addLogEntry({ type: 'error', message: 'Failed to start: ' + e.message, timestamp: new Date().toLocaleTimeString() });
+      document.getElementById('btnStart').disabled = false;
+    }
+  };
+
+  window.stopMonitor = async function() {
+    document.getElementById('btnStop').disabled = true;
+    try {
+      const res = await fetch('/api/stop', { method: 'POST' });
+      const data = await res.json();
+      if (!data.ok) addLogEntry({ type: 'error', message: data.message, timestamp: new Date().toLocaleTimeString() });
+    } catch (e) {
+      addLogEntry({ type: 'error', message: 'Failed to stop: ' + e.message, timestamp: new Date().toLocaleTimeString() });
+      document.getElementById('btnStop').disabled = false;
+    }
+  };
+
+  // --- Init ---
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+  connect();
+})();
+</script>
+
+</body>
+</html>

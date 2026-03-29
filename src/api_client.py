@@ -1,0 +1,260 @@
+"""CineplexBD Ticket API client.
+
+Uses the TICKET API (cineplex-ticket-api) for actual purchasable dates,
+not the web API which only shows scheduled showtimes.
+
+Auth flow:
+1. Use Playwright to load ticket site and do guest login (needs reCAPTCHA)
+2. Capture the Bearer token AND device-key from the request headers
+3. Use those for direct HTTP calls to /get-showdate etc.
+"""
+
+from __future__ import annotations
+import asyncio
+import hashlib
+import json
+import logging
+import secrets
+import time
+from pathlib import Path
+
+import httpx
+
+logger = logging.getLogger("watcher.api")
+
+TICKET_API = "https://cineplex-ticket-api.cineplexbd.com/api/v1"
+WEB_API = "https://cineplex-web-api.cineplexbd.com/api/v1"
+AUTH_CACHE_PATH = Path(__file__).parent.parent / "data" / "auth_cache.json"
+AUTH_CACHE_TTL = 3600  # 1 hour
+
+
+class APIError(Exception):
+    pass
+
+
+def _load_cached_auth() -> tuple[str, str] | None:
+    """Try loading a cached auth token. Returns (token, device_key) or None."""
+    try:
+        if AUTH_CACHE_PATH.exists():
+            cache = json.loads(AUTH_CACHE_PATH.read_text())
+            if time.time() - cache["timestamp"] < AUTH_CACHE_TTL:
+                logger.info("Using cached ticket API token")
+                return cache["token"], cache["device_key"]
+    except Exception:
+        pass
+    return None
+
+
+def _save_cached_auth(token: str, device_key: str) -> None:
+    """Cache the auth token to disk."""
+    AUTH_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    AUTH_CACHE_PATH.write_text(json.dumps({
+        "token": token,
+        "device_key": device_key,
+        "timestamp": time.time(),
+    }))
+
+
+async def _get_ticket_auth_via_browser() -> tuple[str, str]:
+    """Use Playwright to do guest login and capture token + device-key.
+
+    Returns (token, device_key) tuple.
+    """
+    from playwright.async_api import async_playwright
+
+    token = None
+    device_key = None
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+
+        def capture_request(request):
+            nonlocal device_key
+            if "cineplex-ticket-api" in request.url and not device_key:
+                dk = request.headers.get("device-key")
+                if dk:
+                    device_key = dk
+
+        async def capture_response(response):
+            nonlocal token
+            if "guest-login" in response.url and response.status == 200:
+                try:
+                    data = await response.json()
+                    if data.get("status") == "success":
+                        token = data["data"]["token"]
+                except Exception:
+                    pass
+
+        page.on("request", capture_request)
+        page.on("response", lambda r: asyncio.ensure_future(capture_response(r)))
+
+        await page.goto("https://ticket.cineplexbd.com/", wait_until="networkidle", timeout=30000)
+        await page.wait_for_timeout(2000)
+
+        guest_btn = await page.query_selector("text=GUEST LOGIN")
+        if guest_btn:
+            await guest_btn.click()
+            for _ in range(20):
+                if token:
+                    break
+                await page.wait_for_timeout(500)
+
+        await browser.close()
+
+    if not token:
+        raise APIError("Failed to get ticket API token via guest login")
+
+    # If we didn't capture device-key, generate one (SHA-256 hash)
+    if not device_key:
+        device_key = hashlib.sha256(secrets.token_bytes(32)).hexdigest()
+
+    return token, device_key
+
+
+class CineplexAPI:
+    """CineplexBD API client using the ticket API for real availability."""
+
+    def __init__(self):
+        self.ticket_token: str | None = None
+        self.device_key: str | None = None
+        self.web_token: str | None = None
+        self.client = httpx.AsyncClient(
+            timeout=15.0,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/131.0.0.0 Safari/537.36"
+                ),
+            },
+        )
+
+    async def login(self, force: bool = False) -> str:
+        """Get ticket API token, using cache if available."""
+        if not force:
+            cached = _load_cached_auth()
+            if cached:
+                self.ticket_token, self.device_key = cached
+                return self.ticket_token
+
+        print("[Auth] Getting ticket API token (browser guest login)...")
+        self.ticket_token, self.device_key = await _get_ticket_auth_via_browser()
+        _save_cached_auth(self.ticket_token, self.device_key)
+        print("[Auth] Token acquired and cached!")
+        return self.ticket_token
+
+    async def _ensure_auth(self) -> None:
+        if not self.ticket_token:
+            await self.login()
+
+    async def _ticket_post(self, endpoint: str, body: dict | None = None) -> dict | list:
+        """Make an authenticated POST to the ticket API."""
+        await self._ensure_auth()
+        headers = {
+            "Authorization": f"Bearer {self.ticket_token}",
+            "appsource": "web",
+            "device-key": self.device_key or "",
+            "application": "application/json",
+            "Origin": "https://ticket.cineplexbd.com",
+            "Referer": "https://ticket.cineplexbd.com/",
+        }
+        resp = await self.client.post(
+            f"{TICKET_API}/{endpoint}", json=body or {}, headers=headers
+        )
+        data = resp.json()
+
+        if data.get("code") == 401:
+            logger.info("Ticket token expired, re-authenticating...")
+            await self.login(force=True)
+            headers["Authorization"] = f"Bearer {self.ticket_token}"
+            headers["device-key"] = self.device_key or ""
+            resp = await self.client.post(
+                f"{TICKET_API}/{endpoint}", json=body or {}, headers=headers
+            )
+            data = resp.json()
+
+        if data.get("status") == "error":
+            raise APIError(f"Ticket API /{endpoint}: {data.get('message')}")
+
+        return data.get("data", data)
+
+    async def _web_post(self, endpoint: str, body: dict | None = None) -> dict | list:
+        """Make a POST to the web API (auto-login, no reCAPTCHA needed)."""
+        import uuid
+        from datetime import datetime
+
+        if not self.web_token:
+            user_id = uuid.uuid4().hex[:20] + str(int(datetime.now().timestamp() * 1000))
+            headers = {
+                "Origin": "https://www.cineplexbd.com",
+                "Referer": "https://www.cineplexbd.com/",
+            }
+            resp = await self.client.post(
+                f"{WEB_API}/login", json={"user_id": user_id}, headers=headers
+            )
+            data = resp.json()
+            if data.get("status") == "success":
+                self.web_token = data["data"]
+
+        headers = {
+            "Origin": "https://www.cineplexbd.com",
+            "Referer": "https://www.cineplexbd.com/",
+        }
+        if self.web_token:
+            headers["Authorization"] = f"Bearer {self.web_token}"
+
+        resp = await self.client.post(
+            f"{WEB_API}/{endpoint}", json=body or {}, headers=headers
+        )
+        data = resp.json()
+        return data.get("data", data)
+
+    # --- Ticket API methods (actual purchasable dates) ---
+
+    async def get_locations(self) -> list[dict]:
+        """Fetch locations from ticket API.
+
+        Returns: [{id, code, locationTitle, address, totalScreen, district}, ...]
+        """
+        data = await self._ticket_post("get-location")
+        return data if isinstance(data, list) else []
+
+    async def get_showdates(self, location_id: int) -> list[dict]:
+        """Fetch available show dates with purchasable tickets.
+
+        Returns: [{locID, showDate, availableMovies: [{movie_id, movie_title, ...}]}, ...]
+        """
+        data = await self._ticket_post("get-showdate", {"location": location_id})
+        return data if isinstance(data, list) else []
+
+    async def get_movie_dates(self, location_id: int, movie_id: int) -> list[str]:
+        """Get purchasable dates for a specific movie at a location.
+
+        Returns list of date strings like ["2026-03-28", "2026-03-29"].
+        """
+        showdates = await self.get_showdates(location_id)
+        dates = []
+        for entry in showdates:
+            for movie in entry.get("availableMovies", []):
+                if movie.get("movie_id") == movie_id:
+                    dates.append(entry["showDate"])
+                    break
+        return sorted(dates)
+
+    # --- Web API methods (for browsing/setup) ---
+
+    async def get_movies(self, location_id: int = 1) -> dict:
+        """Fetch movie list from web API (running + upcoming).
+
+        Returns: {running: [{id, movie_id, title, ...}], upcoming: [...]}
+        """
+        data = await self._web_post("movie-list", {"location": location_id})
+        if isinstance(data, dict):
+            return data
+        return {"running": [], "upcoming": []}
+
+    async def close(self) -> None:
+        await self.client.aclose()

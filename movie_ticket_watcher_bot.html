@@ -1,0 +1,492 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .root {
+    font-family: 'DM Sans', sans-serif;
+    color: var(--color-text-primary);
+    padding: 1.5rem 1rem 2rem;
+    max-width: 680px;
+  }
+
+  .header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem;
+  }
+  .header .icon {
+    width: 38px; height: 38px; background: var(--color-text-primary);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  }
+  .header .icon svg { width: 20px; height: 20px; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header .badge {
+    margin-left: auto; font-family: 'Space Mono', monospace;
+    font-size: 11px; padding: 3px 10px;
+    background: var(--color-background-success);
+    color: var(--color-text-success);
+    border-radius: 20px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .badge.inactive { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+
+  .card {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .card label {
+    font-size: 12px; color: var(--color-text-secondary);
+    display: block; margin-bottom: 5px; font-weight: 500; letter-spacing: 0.3px;
+  }
+
+  input[type=text], input[type=number], select {
+    width: 100%; font-size: 14px; padding: 8px 12px;
+    border: 0.5px solid var(--color-border-secondary);
+    border-radius: var(--border-radius-md);
+    background: var(--color-background-secondary);
+    color: var(--color-text-primary);
+    outline: none; transition: border-color .15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  input:focus, select:focus { border-color: var(--color-border-primary); }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .row.three { grid-template-columns: 1fr 1fr 1fr; }
+
+  .field { display: flex; flex-direction: column; gap: 4px; }
+
+  .btn-primary {
+    width: 100%; padding: 11px;
+    background: var(--color-text-primary);
+    color: var(--color-background-primary);
+    border: none; border-radius: var(--border-radius-md);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; letter-spacing: 0.2px;
+    transition: opacity .15s;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-stop {
+    width: 100%; padding: 11px;
+    background: var(--color-background-danger);
+    color: var(--color-text-danger);
+    border: 0.5px solid var(--color-border-danger);
+    border-radius: var(--border-radius-md);
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: opacity .15s;
+  }
+  .btn-stop:hover { opacity: 0.8; }
+
+  .log-box {
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    padding: 10px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11.5px;
+    max-height: 200px;
+    overflow-y: auto;
+    color: var(--color-text-secondary);
+    line-height: 1.8;
+  }
+  .log-entry { display: flex; gap: 8px; }
+  .log-entry .time { color: var(--color-text-tertiary); flex-shrink: 0; }
+  .log-entry.found { color: var(--color-text-success); font-weight: 700; }
+  .log-entry.error { color: var(--color-text-danger); }
+
+  .progress-bar {
+    height: 3px; background: var(--color-border-tertiary);
+    border-radius: 99px; margin: 10px 0 4px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--color-text-primary);
+    border-radius: 99px; width: 0%;
+    transition: width 0.4s ease;
+  }
+
+  .stat-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 1rem;
+  }
+  .stat {
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    padding: 10px 12px; text-align: center;
+  }
+  .stat .num { font-size: 22px; font-weight: 500; font-family: 'Space Mono', monospace; }
+  .stat .lbl { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+
+  .alert-box {
+    display: none;
+    background: var(--color-background-success);
+    border: 0.5px solid var(--color-border-success);
+    border-radius: var(--border-radius-md);
+    padding: 14px 16px; margin-bottom: 1rem;
+    animation: popIn .3s ease;
+  }
+  .alert-box.show { display: block; }
+  .alert-box h3 { font-size: 14px; font-weight: 600; color: var(--color-text-success); margin-bottom: 4px; }
+  .alert-box p { font-size: 13px; color: var(--color-text-success); opacity: 0.85; }
+
+  @keyframes popIn {
+    from { transform: scale(0.97); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .note {
+    font-size: 12px; color: var(--color-text-tertiary); margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .section-title {
+    font-size: 12px; font-weight: 600; color: var(--color-text-secondary);
+    letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 10px;
+  }
+
+  .mode-tabs {
+    display: flex; gap: 6px; margin-bottom: 1rem;
+  }
+  .tab {
+    flex: 1; padding: 8px; text-align: center; border-radius: var(--border-radius-md);
+    font-size: 13px; cursor: pointer; border: 0.5px solid var(--color-border-tertiary);
+    background: var(--color-background-secondary); color: var(--color-text-secondary);
+    transition: all .15s; font-family: 'DM Sans', sans-serif;
+  }
+  .tab.active {
+    background: var(--color-text-primary); color: var(--color-background-primary);
+    border-color: transparent; font-weight: 600;
+  }
+
+  .keyword-tags {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
+  }
+  .tag {
+    background: var(--color-background-secondary);
+    border: 0.5px solid var(--color-border-secondary);
+    border-radius: 20px; padding: 3px 10px;
+    font-size: 12px; cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .tag.active {
+    background: var(--color-text-primary);
+    color: var(--color-background-primary);
+    border-color: transparent;
+  }
+</style>
+
+<div class="root">
+
+  <div class="header">
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-background-primary)" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+      </svg>
+    </div>
+    <h1>Ticket Watcher Bot</h1>
+    <span class="badge inactive" id="status-badge">IDLE</span>
+  </div>
+
+  <div id="alert-box" class="alert-box">
+    <h3>🎟️ Tickets Available!</h3>
+    <p id="alert-msg">Seats detected — open the booking page now!</p>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Target Setup</p>
+
+    <div class="field" style="margin-bottom:10px">
+      <label>BOOKING WEBSITE URL</label>
+      <input type="text" id="url" placeholder="https://cineplex.com/movie/dune-part-3/tickets" />
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>MOVIE / EVENT NAME</label>
+        <input type="text" id="movie" placeholder="Dune: Part Three" />
+      </div>
+      <div class="field">
+        <label>PREFERRED SHOWTIME</label>
+        <input type="text" id="showtime" placeholder="7:30 PM – Saturday" />
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:10px">
+      <label>DETECT AVAILABILITY BY — keywords that signal open seats</label>
+      <div class="keyword-tags" id="keyword-tags">
+        <span class="tag active" data-kw="Book Now">Book Now</span>
+        <span class="tag active" data-kw="Add to Cart">Add to Cart</span>
+        <span class="tag active" data-kw="Select Seats">Select Seats</span>
+        <span class="tag" data-kw="Available">Available</span>
+        <span class="tag" data-kw="Buy Tickets">Buy Tickets</span>
+        <span class="tag" data-kw="Choose Seats">Choose Seats</span>
+      </div>
+    </div>
+
+    <div class="row three">
+      <div class="field">
+        <label>CHECK EVERY (seconds)</label>
+        <input type="number" id="interval" value="30" min="10" max="300" />
+      </div>
+      <div class="field">
+        <label>STOP AFTER (minutes)</label>
+        <input type="number" id="duration" value="60" min="5" max="720" />
+      </div>
+      <div class="field">
+        <label>ALERT SOUND</label>
+        <select id="sound-sel">
+          <option value="ping">Ping</option>
+          <option value="chime">Chime</option>
+          <option value="alarm">Alarm</option>
+          <option value="none">None</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="num" id="s-checks">0</div><div class="lbl">Checks done</div></div>
+    <div class="stat"><div class="num" id="s-next">—</div><div class="lbl">Next check in</div></div>
+    <div class="stat"><div class="num" id="s-time">—</div><div class="lbl">Running for</div></div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Activity Log</p>
+    <div class="log-box" id="log">
+      <div class="log-entry"><span class="time">--:--:--</span><span>Bot not started yet.</span></div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="prog"></div></div>
+    <p class="note" id="prog-label">Interval progress shown above.</p>
+  </div>
+
+  <div id="start-wrap">
+    <button class="btn-primary" onclick="startBot()" id="start-btn">Start Watching</button>
+  </div>
+  <div id="stop-wrap" style="display:none">
+    <button class="btn-stop" onclick="stopBot()">Stop Watcher</button>
+  </div>
+
+  <p class="note" style="margin-top:12px">
+    ⚠️ This bot runs <strong>in this browser tab</strong> using a CORS proxy to fetch the page. Keep this tab open. For 24/7 monitoring, copy the Python script below and run it on your PC or a free server.
+  </p>
+
+  <details style="margin-top:1rem">
+    <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--color-text-secondary);padding:6px 0">
+      📋 Python script (run on your computer for background monitoring)
+    </summary>
+    <pre id="py-code" style="margin-top:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px;font-size:11.5px;font-family:'Space Mono',monospace;overflow-x:auto;line-height:1.7;color:var(--color-text-secondary)"></pre>
+    <button class="btn-primary" style="margin-top:8px;width:auto;padding:8px 20px;font-size:13px" onclick="copyPy()">Copy Script</button>
+  </details>
+
+</div>
+
+<script>
+let timer = null, countdown = null, startTime = null;
+let checks = 0, running = false, elapsed = 0, nextIn = 0;
+let activeKws = ['Book Now','Add to Cart','Select Seats'];
+
+// Keyword tag toggle
+document.querySelectorAll('.tag').forEach(t => {
+  t.addEventListener('click', () => {
+    const kw = t.dataset.kw;
+    if (t.classList.contains('active')) {
+      if (activeKws.length <= 1) return;
+      activeKws = activeKws.filter(k => k !== kw);
+      t.classList.remove('active');
+    } else {
+      activeKws.push(kw);
+      t.classList.add('active');
+    }
+  });
+});
+
+function ts() {
+  return new Date().toLocaleTimeString('en-GB', {hour12:false});
+}
+
+function log(msg, type='') {
+  const box = document.getElementById('log');
+  const row = document.createElement('div');
+  row.className = 'log-entry ' + type;
+  row.innerHTML = `<span class="time">${ts()}</span><span>${msg}</span>`;
+  box.appendChild(row);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setStats(c, n, t) {
+  document.getElementById('s-checks').textContent = c;
+  document.getElementById('s-next').textContent = n;
+  document.getElementById('s-time').textContent = t;
+}
+
+function playSound(type) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    if (type === 'ping') { o.frequency.setValueAtTime(880, ctx.currentTime); g.gain.setValueAtTime(0.3, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3); o.start(); o.stop(ctx.currentTime + 0.3); }
+    else if (type === 'chime') { [523,659,784,1047].forEach((f,i) => { const oo = ctx.createOscillator(); const gg = ctx.createGain(); oo.connect(gg); gg.connect(ctx.destination); oo.frequency.value = f; gg.gain.setValueAtTime(0.2, ctx.currentTime+i*0.12); gg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+i*0.12+0.4); oo.start(ctx.currentTime+i*0.12); oo.stop(ctx.currentTime+i*0.12+0.4); }); }
+    else if (type === 'alarm') { for(let i=0;i<3;i++) { const oo = ctx.createOscillator(); const gg = ctx.createGain(); oo.connect(gg); gg.connect(ctx.destination); oo.frequency.value = 1200; gg.gain.setValueAtTime(0.4, ctx.currentTime+i*0.25); gg.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+i*0.25+0.2); oo.start(ctx.currentTime+i*0.25); oo.stop(ctx.currentTime+i*0.25+0.2); } }
+  } catch(e) {}
+}
+
+async function checkPage(url, keywords) {
+  const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+  try {
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const html = data.contents || '';
+    const lower = html.toLowerCase();
+    const found = keywords.filter(k => lower.includes(k.toLowerCase()));
+    return { ok: true, found };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+function fmtElapsed(secs) {
+  if (secs < 60) return secs + 's';
+  const m = Math.floor(secs/60), s = secs%60;
+  return m + 'm ' + s + 's';
+}
+
+async function doCheck() {
+  const url = document.getElementById('url').value.trim();
+  const interval = parseInt(document.getElementById('interval').value) || 30;
+  checks++;
+  log(`Check #${checks} — fetching page…`);
+
+  const result = await checkPage(url, activeKws);
+  if (!result.ok) {
+    log(`Error: ${result.error}`, 'error');
+  } else if (result.found.length > 0) {
+    log(`TICKETS FOUND! Keywords: ${result.found.join(', ')}`, 'found');
+    const sound = document.getElementById('sound-sel').value;
+    if (sound !== 'none') playSound(sound);
+    showAlert(result.found.join(', '));
+    if (Notification.permission === 'granted') {
+      new Notification('🎟️ Tickets Available!', { body: document.getElementById('movie').value + ' — ' + document.getElementById('showtime').value });
+    }
+  } else {
+    log(`No seats yet. Watched for: ${result.found.length === 0 ? 'none of target keywords' : ''}`);
+  }
+
+  setStats(checks, interval + 's', fmtElapsed(elapsed));
+
+  // Progress bar countdown
+  let prog = 0;
+  clearInterval(countdown);
+  document.getElementById('prog').style.width = '0%';
+  countdown = setInterval(() => {
+    prog++;
+    const pct = Math.min(100, Math.round((prog/interval)*100));
+    document.getElementById('prog').style.width = pct + '%';
+    nextIn = interval - prog;
+    elapsed++;
+    setStats(checks, nextIn + 's', fmtElapsed(elapsed));
+    if (prog >= interval) clearInterval(countdown);
+  }, 1000);
+}
+
+function showAlert(kws) {
+  const box = document.getElementById('alert-box');
+  const movie = document.getElementById('movie').value || 'your movie';
+  const show = document.getElementById('showtime').value || 'selected showtime';
+  document.getElementById('alert-msg').textContent = `"${movie}" (${show}) — detected: ${kws}. Open the site now!`;
+  box.classList.add('show');
+}
+
+async function startBot() {
+  const url = document.getElementById('url').value.trim();
+  if (!url || !url.startsWith('http')) { alert('Please enter a valid URL starting with http'); return; }
+  const interval = parseInt(document.getElementById('interval').value) || 30;
+  const duration = parseInt(document.getElementById('duration').value) || 60;
+
+  running = true; checks = 0; elapsed = 0;
+  document.getElementById('start-wrap').style.display = 'none';
+  document.getElementById('stop-wrap').style.display = 'block';
+  document.getElementById('status-badge').textContent = 'WATCHING';
+  document.getElementById('status-badge').classList.remove('inactive');
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('alert-box').classList.remove('show');
+
+  if (Notification.permission === 'default') Notification.requestPermission();
+
+  log('Bot started — watching every ' + interval + 's for ' + duration + ' min');
+  await doCheck();
+  timer = setInterval(async () => {
+    elapsed += 0;
+    if (elapsed >= duration * 60) { stopBot(); log('Max duration reached. Bot stopped.'); return; }
+    await doCheck();
+  }, interval * 1000);
+
+  updatePy();
+}
+
+function stopBot() {
+  running = false;
+  clearInterval(timer); clearInterval(countdown);
+  document.getElementById('start-wrap').style.display = 'block';
+  document.getElementById('stop-wrap').style.display = 'none';
+  document.getElementById('status-badge').textContent = 'IDLE';
+  document.getElementById('status-badge').classList.add('inactive');
+  document.getElementById('prog').style.width = '0%';
+  log('Bot stopped.');
+}
+
+function updatePy() {
+  const url = document.getElementById('url').value || 'https://your-cinema-site.com/tickets';
+  const kws = activeKws.map(k => `"${k}"`).join(', ');
+  const interval = document.getElementById('interval').value || 30;
+  const movie = document.getElementById('movie').value || 'Movie';
+  const code = `# Ticket Watcher Bot — ${movie}
+# Install: pip install requests playsound
+import requests, time, webbrowser
+
+URL = "${url}"
+KEYWORDS = [${kws}]
+INTERVAL = ${interval}  # seconds between checks
+
+def check():
+    try:
+        r = requests.get(URL, timeout=10, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        })
+        html = r.text.lower()
+        found = [k for k in KEYWORDS if k.lower() in html]
+        return found
+    except Exception as e:
+        print(f"Error: {e}")
+        return []
+
+print(f"Watching: {URL}")
+print(f"Keywords: {KEYWORDS}\\n")
+
+while True:
+    print(f"Checking... ({time.strftime('%H:%M:%S')})", end=" ")
+    found = check()
+    if found:
+        print(f"\\n🎟️  TICKETS FOUND! Keywords: {found}")
+        webbrowser.open(URL)
+        import os; os.system("afplay /System/Library/Sounds/Glass.aiff 2>/dev/null || echo '\\a'")
+        break
+    else:
+        print("Not yet.")
+    time.sleep(INTERVAL)
+`;
+  document.getElementById('py-code').textContent = code;
+}
+
+function copyPy() {
+  navigator.clipboard.writeText(document.getElementById('py-code').textContent)
+    .then(() => alert('Python script copied!'));
+}
+
+updatePy();
+document.getElementById('url').addEventListener('input', updatePy);
+document.getElementById('interval').addEventListener('input', updatePy);
+</script>

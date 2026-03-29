@@ -1,0 +1,3 @@
+@echo off
+echo Starting CineplexBD Ticket Watcher with system tray...
+pythonw "%~dp0src\tray.py"

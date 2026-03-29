@@ -1,0 +1,33 @@
+# CineplexBD Ticket Watcher — config template
+# Copy this to config.yaml and fill in your values.
+# Run 'python main.py setup' to auto-fill movie & location.
+
+movie:
+  name: ""
+  id: null
+
+cinema:
+  location: ""
+  location_id: null
+  name: ""
+  id: null
+
+monitoring:
+  interval_seconds: 60       # How often to check (minimum 30s)
+  max_duration_minutes: 0    # 0 = run indefinitely
+  max_consecutive_errors: 10 # Switch to browser fallback after this many errors
+  fallback_to_browser: true
+
+notifications:
+  desktop:
+    enabled: true            # Windows toast notifications
+  telegram:
+    enabled: false
+    # Put secrets in .env instead:
+    #   TELEGRAM_BOT_TOKEN=...
+    #   TELEGRAM_CHAT_ID=...
+    bot_token: ""
+    chat_id: ""
+
+logging:
+  level: INFO
