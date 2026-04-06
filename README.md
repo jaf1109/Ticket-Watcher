@@ -4,7 +4,7 @@
 ## 🚀 Quick Start (Windows)
 
 1. Download the latest release:
-   👉 https://github.com/SalsabilaZaman/Ticket-Watcher
+   👉 https://github.com/SalsabilaZaman/Ticket-Watcher/releases
 
 2. Extract the ZIP file
 
