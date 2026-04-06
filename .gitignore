@@ -32,3 +32,5 @@ desktop.ini
 .idea/
 *.suo
 *.user
+build_exe.bat
+
