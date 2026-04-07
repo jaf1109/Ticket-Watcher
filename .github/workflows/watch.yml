@@ -13,7 +13,7 @@ on:
 jobs:
   watch:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -27,12 +27,14 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Cache Playwright browser
+        if: ${{ github.event.inputs.test_notify != 'true' }}
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ hashFiles('requirements.txt') }}
 
       - name: Install Playwright (with system deps)
+        if: ${{ github.event.inputs.test_notify != 'true' }}
         run: playwright install chromium --with-deps
 
       - name: Restore watcher state & auth cache
