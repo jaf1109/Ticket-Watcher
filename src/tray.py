@@ -30,7 +30,7 @@ from src.service import main as run_service
 
 logger = logging.getLogger("watcher.tray")
 
-PORT = 8080
+PORT = 5096
 
 
 def create_icon_image(color: str = "#7c3aed") -> Image.Image:

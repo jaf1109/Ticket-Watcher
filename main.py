@@ -215,7 +215,7 @@ async def cmd_watch(args) -> None:
 
     print("CineplexBD Ticket Watcher")
     print("=" * 40)
-    await run_monitor(config)
+    await run_monitor(config, run_once=args.once)
 
 
 async def cmd_test_notify(args) -> None:
@@ -243,7 +243,7 @@ async def cmd_dashboard(args) -> None:
     hub = WatcherHub(config)
     app = create_app(hub)
 
-    port = args.port or 8080
+    port = args.port or 5096
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "localhost", port)
@@ -321,10 +321,11 @@ Commands:
     p_movies.add_argument("location_id", nargs="?", type=int, default=None, help="Location ID")
 
     sub.add_parser("setup", help="Interactive setup")
-    sub.add_parser("watch", help="Start monitoring")
+    p_watch = sub.add_parser("watch", help="Start monitoring")
+    p_watch.add_argument("--once", action="store_true", help="Run a single check and exit (for CI/cron)")
 
     p_dash = sub.add_parser("dashboard", help="Launch web dashboard")
-    p_dash.add_argument("--port", type=int, default=8080, help="Port (default: 8080)")
+    p_dash.add_argument("--port", type=int, default=5096, help="Port (default: 5096)")
     p_dash.add_argument("--no-browser", action="store_true", help="Don't auto-open browser")
 
     sub.add_parser("test-notify", help="Test notifications")

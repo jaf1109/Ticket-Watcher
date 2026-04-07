@@ -42,6 +42,7 @@ async def run_monitor(
     on_event: Callable[[dict], Awaitable[None]] | None = None,
     stop_event: asyncio.Event | None = None,
     api: CineplexAPI | None = None,
+    run_once: bool = False,
 ) -> None:
     """Main monitoring loop.
 
@@ -238,6 +239,8 @@ async def run_monitor(
             })
 
         if not _stop.is_set():
+            if run_once:
+                break
             try:
                 await asyncio.wait_for(_stop.wait(), timeout=interval)
             except asyncio.TimeoutError:

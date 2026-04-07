@@ -60,7 +60,7 @@ def remove_pid() -> None:
         pass
 
 
-async def main(port: int = 8080) -> None:
+async def main(port: int = 5096) -> None:
     setup_logging()
     logger = logging.getLogger("watcher.service")
 
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="CineplexBD Ticket Watcher Service")
-    parser.add_argument("--port", type=int, default=8080, help="Port (default: 8080)")
+    parser.add_argument("--port", type=int, default=5096, help="Port (default: 5096)")
     args = parser.parse_args()
 
     asyncio.run(main(port=args.port))
