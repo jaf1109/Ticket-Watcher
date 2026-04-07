@@ -2,8 +2,13 @@ name: Ticket Watcher
 
 on:
   schedule:
-    - cron: '*/10 * * * *'   # Every 10 minutes
-  workflow_dispatch:          # Allow manual runs
+    - cron: "*/10 * * * *" # Every 10 minutes
+  workflow_dispatch:
+    inputs:
+      test_notify:
+        description: "Send a test Telegram notification instead of checking tickets"
+        type: boolean
+        default: false
 
 jobs:
   watch:
@@ -15,8 +20,8 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-          cache: 'pip'
+          python-version: "3.10"
+          cache: "pip"
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt
@@ -39,7 +44,15 @@ jobs:
             ticket-watcher-data-
 
       - name: Run single check
+        if: ${{ github.event.inputs.test_notify != 'true' }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py watch --once
+
+      - name: Send test notification
+        if: ${{ github.event.inputs.test_notify == 'true' }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python main.py test-notify
