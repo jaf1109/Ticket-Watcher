@@ -50,6 +50,10 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MOVIE_ID: ${{ vars.MOVIE_ID }}
+          MOVIE_NAME: ${{ vars.MOVIE_NAME }}
+          LOCATION_ID: ${{ vars.LOCATION_ID }}
+          LOCATION_NAME: ${{ vars.LOCATION_NAME }}
           PYTHONUNBUFFERED: "1"
         run: python -u main.py watch --once
 
@@ -58,5 +62,9 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MOVIE_ID: ${{ vars.MOVIE_ID }}
+          MOVIE_NAME: ${{ vars.MOVIE_NAME }}
+          LOCATION_ID: ${{ vars.LOCATION_ID }}
+          LOCATION_NAME: ${{ vars.LOCATION_NAME }}
           PYTHONUNBUFFERED: "1"
         run: python -u main.py test-notify

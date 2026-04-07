@@ -225,9 +225,12 @@ async def cmd_test_notify(args) -> None:
     config = load_config()
     notifier = Notifier.from_config(config)
 
+    movie = config.movie.name or f"ID: {config.movie.id}"
+    location = config.cinema.location or f"ID: {config.cinema.location_id}"
+
     print("Sending test notifications...")
     await notifier.notify_all(
-        message="This is a test from CineplexBD Ticket Watcher!\nIf you see this, notifications are working.",
+        message=f"This is a test from CineplexBD Ticket Watcher!\nIf you see this, notifications are working.\n\nWatching: {movie}\nLocation: {location}",
         title="Test Notification",
     )
     print("Done! Check your desktop and Telegram.")

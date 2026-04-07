@@ -81,6 +81,20 @@ def load_config(path: str | Path | None = None) -> Config:
     if chat_id:
         config.notifications.telegram.chat_id = chat_id
 
+    # Environment variable overrides for movie/location (for CI/cron)
+    movie_id = os.environ.get("MOVIE_ID")
+    if movie_id:
+        config.movie.id = int(movie_id)
+    movie_name = os.environ.get("MOVIE_NAME")
+    if movie_name:
+        config.movie.name = movie_name
+    location_id = os.environ.get("LOCATION_ID")
+    if location_id:
+        config.cinema.location_id = int(location_id)
+    location_name = os.environ.get("LOCATION_NAME")
+    if location_name:
+        config.cinema.location = location_name
+
     return config
 
 
