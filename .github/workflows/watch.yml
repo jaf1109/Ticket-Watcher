@@ -50,11 +50,13 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python main.py watch --once
+          PYTHONUNBUFFERED: "1"
+        run: python -u main.py watch --once
 
       - name: Send test notification
         if: ${{ github.event.inputs.test_notify == 'true' }}
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python main.py test-notify
+          PYTHONUNBUFFERED: "1"
+        run: python -u main.py test-notify

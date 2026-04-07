@@ -34,11 +34,11 @@ class MonitoringConfig(BaseModel):
 
 
 class DesktopNotifConfig(BaseModel):
-    enabled: bool = True
+    enabled: bool = False
 
 
 class TelegramConfig(BaseModel):
-    enabled: bool = False
+    enabled: bool = True
     bot_token: str = ""
     chat_id: str = ""
 

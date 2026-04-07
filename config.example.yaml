@@ -20,9 +20,9 @@ monitoring:
 
 notifications:
   desktop:
-    enabled: true            # Windows toast notifications
+    enabled: false           # Windows toast notifications
   telegram:
-    enabled: false
+    enabled: true
     # Put secrets in .env instead:
     #   TELEGRAM_BOT_TOKEN=...
     #   TELEGRAM_CHAT_ID=...
