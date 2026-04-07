@@ -67,12 +67,11 @@ def load_config(path: str | Path | None = None) -> Config:
     path = Path(path)
 
     if not path.exists():
-        return Config()
-
-    with open(path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
-
-    config = Config(**data)
+        config = Config()
+    else:
+        with open(path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        config = Config(**data)
 
     # Environment variable overrides for secrets
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
